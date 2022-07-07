@@ -1,0 +1,53 @@
+#ifndef UART_SETTINGS_H
+#define UART_SETTINGS_H
+
+#include <stdint.h>
+#include <string>
+
+/*@brief Flow control modes. */
+typedef enum
+{
+    UartFlowControlNone,
+    UartFlowControlSoftware,
+    UartFlowControlHardware
+} UartFlowControl;
+
+/*@brief Parity modes. */
+typedef enum
+{
+    UartParityNone,
+    UartParityOdd,
+    UartParityEven
+} UartParity;
+
+/*@brief Stop bit modes. */
+typedef enum
+{
+    UartStopBitsOne,
+    UartStopBitsOnePointFive,
+    UartStopBitsTwo
+} UartStopBits;
+
+/*@brief Data bit modes. */
+typedef enum
+{
+    UartDataBitsFive  = 5,
+    UartDataBitsSix   = 6,
+    UartDataBitsSeven = 7,
+    UartDataBitsEight = 8
+} UartDataBits;
+
+/*@brief UART communication parameters. */
+typedef struct
+{
+    const char * portName;
+    uint32_t baudRate;
+    UartFlowControl flowControl;
+    UartParity parity;
+    UartStopBits stopBits;
+    UartDataBits dataBits;
+} UartCommunicationParameters;
+
+esp_err_t uart_driver_install(uart_port_t uart_num, int rx_buffer_size, int tx_buffer_size, int queue_size, QueueHandle_t *uart_queue, int intr_alloc_flags)
+esp_err_t uart_set_hw_flow_ctrl(uart_port_t uart_num, uart_hw_flowcontrol_t flow_ctrl, uint8_t rx_thresh)
+esp_err_t uart_get_hw_flow_ctrl(uart_port_t uart_num, uart_hw_flowcontrol_t *flow_ctrl)
