@@ -1,0 +1,80 @@
+#include <stdio.h>
+    #include <string.h>
+    #include "esp_log.h"
+    #include "freertos/FreeRTOS.h"
+    #include "freertos/task.h"
+    #include "driver/uart.h"
+    
+    static const char *TAG = "uart_flush_test";
+    
+    #define UART_TO_TEST  UART_NUM_2	/* Uart to test. */
+    
+    /* Use any 2 available I/O pins and connect them together with a 
+     * jumper wire. Note pins 34 and higher can only be inputs. 
+     */
+    #define TXD_PIN  (GPIO_NUM_33)
+    #define RXD_PIN  (GPIO_NUM_34)
+    
+    #define BUF_SIZE (1024)
+    
+    /* Configure parameters of UART driver,
+     * communication pins and install the driver 
+     */
+    void Configure_Uart(int uart_num, int tx_pin, int rx_pin) {
+        uart_config_t uart_config = { 
+                .baud_rate = 115200, 
+                .data_bits = UART_DATA_8_BITS, 
+                .parity = UART_PARITY_DISABLE, 
+                .stop_bits = UART_STOP_BITS_1, 
+                .flow_ctrl = UART_HW_FLOWCTRL_DISABLE 
+        };
+        if (uart_param_config(uart_num, &uart_config) < 0) {
+            ESP_LOGE(TAG, "uart_param_config() error!");
+        }
+        if (uart_set_pin(uart_num, tx_pin, rx_pin, UART_PIN_NO_CHANGE,
+                UART_PIN_NO_CHANGE) < 0) {
+            ESP_LOGE(TAG, "uart_set_pin() error!");
+        }
+        if (uart_driver_install(uart_num, BUF_SIZE * 2, 0, 0, NULL, 0) < 0) {
+            ESP_LOGE(TAG, "uart_driver_install() error!");
+        }
+    }
+    
+    void app_main() {
+        int len;
+        uint8_t buf[BUF_SIZE];
+        char s[200];
+        memset(buf, 0, sizeof(buf));
+        memset(s, 0, sizeof(s));
+        Configure_Uart(UART_TO_TEST, TXD_PIN, RXD_PIN);
+        ESP_LOGI(TAG, "UART_TO_TEST = %d", UART_TO_TEST);
+    
+        int count = 0;
+        while (true) {
+            if (count == 5) {
+                /* Flush only 1 time (after sending some data). */
+                ESP_LOGI(TAG, "Calling uart_flush(%d)", UART_TO_TEST);
+                uart_flush (UART_TO_TEST);
+            }
+    
+            /* Write data to the UART. */
+            sprintf(s, "abcdefghijklmnopqrst_(%03d)",count);
+            len = uart_write_bytes(UART_TO_TEST, s, strlen(s));
+            if (len < 0) {
+                ESP_LOGE(TAG, "Could not write bytes! (%d)", len);
+            }
+            
+            /* Read data back from the UART */
+            len = uart_read_bytes(UART_TO_TEST, buf, BUF_SIZE - 1,
+                    1000 / portTICK_RATE_MS);
+            if (len > 0) {
+                /* Log received data to the console. */
+                buf[len] = '\0';
+                ESP_LOGI(TAG, ">%s<", buf);
+            } else {
+                ESP_LOGE(TAG, "RX Timeout (check tx pin is connected to rx pin");
+            }
+    
+            count++;
+        }
+    }
